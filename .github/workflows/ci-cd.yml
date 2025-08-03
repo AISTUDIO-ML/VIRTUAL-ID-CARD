@@ -1,0 +1,79 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_DB: testdb
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install Python dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Run Python tests
+      run: |
+        pytest
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm install
+
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm run build
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        provider: [azure, aws, gcp]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Deploy to Azure
+      if: matrix.provider == 'azure'
+      run: echo "Deploying to Azure..."  # Replace with actual Azure CLI deployment commands
+
+    - name: Deploy to AWS
+      if: matrix.provider == 'aws'
+      run: echo "Deploying to AWS..."  # Replace with actual AWS CLI deployment commands
+
+    - name: Deploy to GCP
+      if: matrix.provider == 'gcp'
+      run: echo "Deploying to GCP..."  # Replace with actual GCP CLI deployment commands
